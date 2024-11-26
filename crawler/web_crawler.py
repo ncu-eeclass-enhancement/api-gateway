@@ -99,10 +99,10 @@ def get_handouts(cookie: str, course_id: str):
                         print(a_tag['href'])
 
                         fileurl = requests.get("https://ncueeclass.ncu.edu.tw"+a_tag['href'], headers=headers).content
-                        with open("file_content.txt", 'wb') as f:
+                        
+                        with open("file.pdf", 'wb') as f:
                             f.write(fileurl)
-
-                        with open("file_content.txt", 'rb') as f:
+                        with open("file.pdf", 'rb') as f:
                             content=f.read()
 
                         file_date = file_soup.find('div', class_='ext2 fs-hint')
