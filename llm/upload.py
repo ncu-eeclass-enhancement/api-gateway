@@ -1,4 +1,3 @@
-
 from typing import Generator
 from typing_extensions import override
 from openai import AssistantEventHandler

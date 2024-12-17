@@ -1,1 +1,4 @@
+bs4==0.0.2
 fastapi[standard]
+openai==1.57.4
+requests==2.32.3

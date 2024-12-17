@@ -34,7 +34,7 @@ from openai import AssistantEventHandler
 def stream_response(prompt: str, thread_id: str, assistant_id: str, client):
     class EventHandler(AssistantEventHandler):
         @override
-        def on_text_created(self, text) -> None:
+        def on_text_created(self, text):
             yield {"type": "text_created", "content": text}
 
         @override
