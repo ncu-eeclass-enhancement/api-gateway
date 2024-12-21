@@ -7,7 +7,11 @@ RUN pip install -r requirements.txt
 
 FROM pip-install
 
+COPY . .
+ENV PYTHONUNBUFFERED=1
+ENV OPENAI_KEY=
+ENV AI_MODEL=gpt-4o
+
 EXPOSE 8000
 
-COPY . .
-CMD [ "fastapi", "run", "api/main.py" ]
+CMD [ "fastapi", "run", "main.py" ]

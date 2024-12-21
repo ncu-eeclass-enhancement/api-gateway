@@ -1,9 +1,9 @@
-from typing import Generator
-from typing_extensions import override
-from openai import AssistantEventHandler
 import os
+
 from dotenv import load_dotenv
 from openai import OpenAI  # Assuming OpenAI is your imported client
+from openai import AssistantEventHandler
+from typing_extensions import override
 
 # Load the .env file
 load_dotenv()
@@ -14,27 +14,28 @@ key = os.getenv("key")
 # Initialize the OpenAI client
 client = OpenAI(api_key=key)
 assistant = client.beta.assistants.create(
-  name="Math Tutor",
-  instructions="You are a personal math tutor. Write and run code to answer math questions.",
-  tools=[{"type": "code_interpreter"}],
-  model="gpt-4o",
+    name="Math Tutor",
+    instructions="You are a personal math tutor. Write and run code to answer math questions.",
+    tools=[{"type": "code_interpreter"}],
+    model="gpt-4o",
 )
 
 thread = client.beta.threads.create()
 
 message = client.beta.threads.messages.create(
-  thread_id=thread.id,
-  role="user",
-  content="hello"#"I need to solve the equation `3x + 11 = 14`. Can you help me?"
+    thread_id=thread.id,
+    role="user",
+    content="hello",  # "I need to solve the equation `3x + 11 = 14`. Can you help me?"
 )
 
-from typing_extensions import override
 from openai import AssistantEventHandler
+from typing_extensions import override
+
 
 def stream_response(prompt: str, thread_id: str, assistant_id: str, client):
     class EventHandler(AssistantEventHandler):
         @override
-        def on_text_created(self, text) -> None:
+        def on_text_created(self, text):
             yield {"type": "text_created", "content": text}
 
         @override
@@ -47,9 +48,12 @@ def stream_response(prompt: str, thread_id: str, assistant_id: str, client):
 
         @override
         def on_tool_call_delta(self, delta, snapshot):
-            if delta.type == 'code_interpreter':
+            if delta.type == "code_interpreter":
                 if delta.code_interpreter.input:
-                    yield {"type": "tool_input", "content": delta.code_interpreter.input}
+                    yield {
+                        "type": "tool_input",
+                        "content": delta.code_interpreter.input,
+                    }
                 if delta.code_interpreter.outputs:
                     outputs = []
                     for output in delta.code_interpreter.outputs:
@@ -67,7 +71,6 @@ def stream_response(prompt: str, thread_id: str, assistant_id: str, client):
         for event in stream:
             yield event
 
+
 for x in stream_response("hi", thread.id, assistant.id, client):
     print(x)
-    
-# stream_response("hi", thread.id, assistant.id, client)
