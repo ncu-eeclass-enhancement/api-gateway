@@ -10,4 +10,4 @@ FROM pip-install
 EXPOSE 8000
 
 COPY . .
-CMD [ "fastapi", "run", "api/main.py" ]
+CMD [ "fastapi", "run", "main.py" ]
