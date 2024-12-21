@@ -1,17 +1,6 @@
-from enum import Enum
-
-from pydantic import BaseModel
-
-
-class Sender(Enum):
-    SYSTEM = 0
-    USER = 1
+from pydantic import BaseModel, Field
 
 
 class Message(BaseModel):
-    sender: Sender
+    sender: int = Field(description="0: Assistant, 1: User")
     content: str
-
-
-class History(BaseModel):
-    history: list[Message]
