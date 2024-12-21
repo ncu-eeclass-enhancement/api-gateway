@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 import psycopg2
 from dotenv import load_dotenv
@@ -15,9 +16,11 @@ from repository.user import UserRepository
 
 load_dotenv()
 
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+
 app = FastAPI()
 db = psycopg2.connect(
-    "host=localhost port=5432 dbname=postgres user=postgres password=dev"
+    f"host=127.0.0.1 port=5432 dbname=postgres user=postgres password={DB_PASSWORD}"
 )
 
 course_repository = CourseRepository(db)

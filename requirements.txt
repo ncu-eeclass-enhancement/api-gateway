@@ -1,6 +1,7 @@
 bs4==0.0.2
 fastapi[standard]
 openai==1.57.4
+psycopg2-binary==2.9.10
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 requests==2.32.3
