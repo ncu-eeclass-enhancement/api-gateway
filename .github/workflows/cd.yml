@@ -45,6 +45,17 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             sudo podman pull ${{ vars.DOCKER_IMAGE }}
-            sudo podman run -d -p ${{ vars.DEPLOY_PORT }}:8000 \
+            sudo podman pod create \
+              -p ${{ vars.DEPLOY_PORT }}:8000 \
+              --replace --force ${{ vars.DEPLOY_POD }}
+            sudo podman run -d \
+              --name ${{ vars.DEPLOY_CONTAINER }}-postgres \
+              --pod ${{ vars.DEPLOY_POD }} \
+              -e POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -v ${{ vars.DEPLOY_CONTAINER }}-postgres:/var/lib/postgresql/data \
+              --replace --restart always postgres:17.2-alpine
+            sudo podman run -d \
               --name ${{ vars.DEPLOY_CONTAINER }} \
+              --pod ${{ vars.DEPLOY_POD }} \
+              -e OPENAI_KEY=${{ secrets.OPENAI_KEY }} \
               --replace --restart always ${{ vars.DOCKER_IMAGE }}
