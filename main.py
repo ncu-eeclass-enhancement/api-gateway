@@ -1,16 +1,17 @@
-import asyncio
 import os
+from typing import Annotated
 
 import psycopg2
 from dotenv import load_dotenv
-from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi import FastAPI, Header, Body, HTTPException, Request, status
 from fastapi.responses import PlainTextResponse, StreamingResponse
 
 from crawler.web_crawler import get_handouts, last_update
-from llm.llm import update_handouts
+from llm.llm import message, update_handouts
 from model.course import Course
-from model.handout import Handout
-from model.message import History
+from model.history import History
+from model.message import Message
+from model.user import User
 from repository.course import CourseRepository
 from repository.user import UserRepository
 
@@ -33,23 +34,67 @@ def root(request: Request) -> PlainTextResponse:
 
 
 @app.post("/message/{course_id}/send")
-async def message_send(
+def message_send(
     course_id: int,
+    content: Annotated[str, Body(embed=True)],
     x_with_cookie: str = Header(),
 ) -> StreamingResponse:
-    async def response():
-        for c in f"Hello, {course_id}":
-            await asyncio.sleep(0.25)
-            yield f"{c}\r\n"
+    user_id = parse_account_from_cookie(x_with_cookie)
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing user ID in the cookie",
+        )
+
+    course = course_repository.get_course(course_id)
+    if course is None or course.vector_store_id is None or course.assistant_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Course hans't been indexed",
+        )
+
+    user = user_repository.get_user(user_id)
+    if user is None:
+        user = User(id=user_id, histories=[])
+        user_repository.create_user(user)
+
+    history = list(filter(lambda e: e.course_id == course_id, user.histories))
+    history = (
+        History(course_id=course_id, history=[]) if len(history) == 0 else history[0]
+    )
+
+    def response():
+        reply = ""
+        for part in message(course.assistant_id, tuple(history.history), content):
+            reply += part
+            yield part
+        history.history.append(Message(sender=1, content=content))
+        history.history.append(Message(sender=0, content=reply))
+        has_history = False
+        for i, h in enumerate(user.histories):
+            if h.course_id == course_id:
+                user.histories[i] = history
+                has_history = True
+                break
+        if not has_history:
+            user.histories.append(history)
+        user_repository.update_user(user)
 
     return StreamingResponse(response())
 
 
 @app.post("/message/{course_id}/index")
-async def course_index(
+def course_index(
     course_id: int,
     x_with_cookie: str = Header(),
 ) -> History:
+    user_id = parse_account_from_cookie(x_with_cookie)
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing user ID in the cookie",
+        )
+
     last_updated_time = last_update(x_with_cookie, course_id)
     if last_updated_time is None:
         raise HTTPException(
@@ -62,10 +107,15 @@ async def course_index(
         course = Course(id=course_id, updated_time=last_updated_time)
         course_repository.create_course(course)
 
+    user = user_repository.get_user(user_id)
+    if user is None:
+        user = User(id=user_id, histories=[])
+        user_repository.create_user(user)
+
     handouts = get_handouts(x_with_cookie, course_id)
     vector_store_id, assistant_id = update_handouts(
         course_id,
-        handouts,
+        tuple(handouts),
         course.vector_store_id,
         course.assistant_id,
     )
@@ -74,4 +124,17 @@ async def course_index(
     course.assistant_id = assistant_id
     course_repository.update_course(course)
 
-    return History(history=[])
+    history = list(filter(lambda e: e.course_id == course_id, user.histories))
+    history = (
+        History(course_id=course_id, history=[]) if len(history) == 0 else history[0]
+    )
+
+    return history
+
+
+def parse_account_from_cookie(cookie: str) -> str | None:
+    for c in cookie.split(";"):
+        key, value = tuple(map(lambda e: e.strip(), c.split("=")))
+        if key == "account":
+            return value
+    return None

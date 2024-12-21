@@ -59,20 +59,23 @@ class CourseRepository:
 
     def create_course(self, course: Course):
         with self.db.cursor() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO public.course (id, handouts, vector_store_id, assistant_id, updated_time)
-                VALUES (%s, %s, %s, %s, %s);
-                """,
-                (
-                    course.id,
-                    course.handouts,
-                    course.vector_store_id,
-                    course.assistant_id,
-                    course.updated_time,
-                ),
-            )
-            self.db.commit()
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO public.course (id, handouts, vector_store_id, assistant_id, updated_time)
+                    VALUES (%s, %s, %s, %s, %s);
+                    """,
+                    (
+                        course.id,
+                        course.handouts,
+                        course.vector_store_id,
+                        course.assistant_id,
+                        course.updated_time,
+                    ),
+                )
+                self.db.commit()
+            except DuplicateObject:
+                pass
 
     def update_course(self, course: Course):
         with self.db.cursor() as cursor:

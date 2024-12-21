@@ -32,7 +32,7 @@ from openai import AssistantEventHandler
 from typing_extensions import override
 
 
-def stream_response(prompt: str, thread_id: str, assistant_id: str, client):
+def stream_response(prompt: str, thread_id: str, assistant_id: str, client: OpenAI):
     class EventHandler(AssistantEventHandler):
         @override
         def on_text_created(self, text):

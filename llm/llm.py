@@ -1,12 +1,14 @@
 import os
-from typing import Iterable
+from typing import Any, Generator, Iterable
 
 from dotenv import load_dotenv
 from openai import OpenAI
-from openai.types.beta import VectorStore, Assistant
+from openai.types.beta import Assistant, VectorStore
+from openai.types.beta.threads import MessageDeltaEvent, TextDeltaBlock
 from pydantic import BaseModel, Field
 
 from model.handout import Handout
+from model.message import Message
 
 load_dotenv()
 
@@ -24,7 +26,7 @@ class _File(BaseModel):
 
 def update_handouts(
     course_id: int,
-    handouts: list[Handout],
+    handouts: tuple[Handout],
     vector_store_id: str = None,
     assistant_id: str = None,
 ) -> tuple[str, str]:
@@ -43,6 +45,32 @@ def update_handouts(
     upload_and_replace_files(files, vector_store_id)
 
     return (vector_store_id, assistant_id)
+
+
+def message(
+    assistant_id: str,
+    history: tuple[Message],
+    content: str,
+) -> Generator[str, Any, None]:
+    messages = list(
+        map(
+            lambda e: {
+                "role": "assistant" if e.sender == 0 else "user",
+                "content": e.content,
+            },
+            history,
+        )
+    )
+    messages.append({"role": "user", "content": content})
+    with client.beta.threads.create_and_run_stream(
+        assistant_id=assistant_id,
+        thread={"messages": messages},
+    ) as stream:
+        for event in stream:
+            if isinstance(event.data, MessageDeltaEvent):
+                content = event.data.delta.content[0]
+                if isinstance(content, TextDeltaBlock):
+                    yield event.data.delta.content[0].text.value
 
 
 def upload_and_replace_files(files: Iterable[_File], vector_store_id: str):
