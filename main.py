@@ -102,27 +102,28 @@ def course_index(
             detail="Failed to fetch materials",
         )
 
-    course = course_repository.get_course(course_id)
-    if course is None:
-        course = Course(id=course_id, updated_time=last_updated_time)
-        course_repository.create_course(course)
-
     user = user_repository.get_user(user_id)
     if user is None:
         user = User(id=user_id, histories=[])
         user_repository.create_user(user)
 
-    handouts = get_handouts(x_with_cookie, course_id)
-    vector_store_id, assistant_id = update_handouts(
-        course_id,
-        tuple(handouts),
-        course.vector_store_id,
-        course.assistant_id,
-    )
+    course = course_repository.get_course(course_id)
+    if course is None:
+        course = Course(id=course_id, updated_time=last_updated_time)
+        course_repository.create_course(course)
 
-    course.vector_store_id = vector_store_id
-    course.assistant_id = assistant_id
-    course_repository.update_course(course)
+    if course.updated_time >= last_updated_time:
+        handouts = get_handouts(x_with_cookie, course_id)
+        vector_store_id, assistant_id = update_handouts(
+            course_id,
+            tuple(handouts),
+            course.vector_store_id,
+            course.assistant_id,
+        )
+
+        course.vector_store_id = vector_store_id
+        course.assistant_id = assistant_id
+        course_repository.update_course(course)
 
     history = list(filter(lambda e: e.course_id == course_id, user.histories))
     history = (
