@@ -112,7 +112,7 @@ def course_index(
         course = Course(id=course_id, updated_time=last_updated_time)
         course_repository.create_course(course)
 
-    if course.updated_time >= last_updated_time:
+    if course.updated_time.timestamp() < last_updated_time.timestamp():
         handouts = get_handouts(x_with_cookie, course_id)
         vector_store_id, assistant_id = update_handouts(
             course_id,
